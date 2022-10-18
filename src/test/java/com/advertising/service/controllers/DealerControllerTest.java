@@ -146,7 +146,7 @@ public class DealerControllerTest extends ServiceTest {
         // Given
         Dealer dealer = DealerDataBuilder.getBuilder()
                 .id(2)
-                .limitOfPublishedListings(10)
+                .limitOfPublishedListings(2)
                 .build();
         // When
         String response = mockMvc.perform(get("/v1/dealers?" + "dealerIds=" + dealer.getId() +

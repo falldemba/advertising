@@ -2,7 +2,9 @@ package com.advertising.service.controllers;
 
 import com.advertising.service.ServiceTest;
 import com.advertising.service.builders.ListingDataBuilder;
+import com.advertising.service.builders.ManageListingDataBuilder;
 import com.advertising.service.models.Listing;
+import com.advertising.service.models.ManageListing;
 import com.advertising.service.models.POJO.ListingPojo;
 import com.advertising.service.models.State;
 import com.advertising.service.repositories.ListingRepository;
@@ -142,16 +144,17 @@ public class ListingControllerTest extends ServiceTest {
     void shouldManageListing() throws Exception {
 
         // Given
-        int listingId = 5;
+        int listingId = 8;
         State state = State.published;
+        ManageListing manageListing = ManageListingDataBuilder.getBuilder().state(state).build();
 
         // When
         mockMvc.perform(put("/v1/listings/manage/" + listingId)
                         .contentType(APPLICATION_JSON_UTF8)
-                .content(utils.convertObjectToJsonBytes(state)))
+                .content(utils.convertObjectToJsonBytes(manageListing)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(listingId))
-                .andExpect(jsonPath("$.state").value(state.name()));
+                .andExpect(jsonPath("$.state").value(manageListing.getState().name()));
     }
 
     @Test
@@ -159,10 +162,9 @@ public class ListingControllerTest extends ServiceTest {
 
         // Given
         Listing listing = ListingDataBuilder.getBuilder()
-                .dealerId(2)
                 .price(1023L)
-                .state(State.draft)
-                .vehicle("DODGE")
+                .state(State.published)
+                .vehicle("")
                 .build();
         // When
         String response = mockMvc.perform(get("/v1/listings?" +
@@ -178,7 +180,7 @@ public class ListingControllerTest extends ServiceTest {
 
         // Then
         List<ListingPojo> listingsResultList = utils.convertJsonToObjectList(new ObjectMapper().readTree(response).get("content").toString(), ListingPojo.class);
-        assertEquals(1, listingsResultList.size());
+        assertEquals(2, listingsResultList.size());
     }
 
 }

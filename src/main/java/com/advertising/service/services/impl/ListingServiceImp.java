@@ -8,6 +8,7 @@ import com.advertising.service.exceptions.ResourceNotFoundException;
 import com.advertising.service.mappers.DealerMapper;
 import com.advertising.service.mappers.ListingMapper;
 import com.advertising.service.models.Listing;
+import com.advertising.service.models.ManageListing;
 import com.advertising.service.models.POJO.ListingPojo;
 import com.advertising.service.models.State;
 import com.advertising.service.repositories.DealerRepository;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.MessageFormat;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -47,6 +49,9 @@ public class ListingServiceImp implements ListingService {
         /* Getting related Entity */
         ListingEntity listingEntity = listingMapper.asListingEntity(listing);
         fillListingEntityDealerId(listing, listingEntity);
+
+        /* Set state to default value if state is different to draft */
+        if(!listingEntity.getState().equals(State.draft)){listingEntity.setState(State.draft);}
 
         /* Saving entity */
         ListingPojo createdListing = listingMapper.asListing(listingRepository.save(listingEntity));
@@ -103,7 +108,6 @@ public class ListingServiceImp implements ListingService {
         return updatedListing;
     }
     private void fillListingEntityDealerId(Listing listing, ListingEntity listingEntity){
-        listingEntity.setState(State.draft);
         Optional<DealerEntity> dealerEntity = dealerRepository.findById(listing.getDealerId());
         dealerEntity.ifPresent(listingEntity::setDealer);
     }
@@ -124,42 +128,62 @@ public class ListingServiceImp implements ListingService {
     }
 
     @Override
-    public ListingPojo manageListing(Integer listingId, State state) {
+    public ListingPojo manageListing(Integer listingId, ManageListing manageListing) {
 
         log.info("start managing listing with the id: {}", listingId );
         /* Getting listing */
-        Optional<ListingEntity> manageListing = listingRepository.findById(listingId);
+        Optional<ListingEntity> listingEntityToManaged = listingRepository.findById(listingId);
 
         /* Check if resource is present */
-        if(!manageListing.isPresent()){ throw new ResourceNotFoundException(MessageFormat.format(LISTING_IDENTIFIER_NOT_FOUND_MESSAGE, listingId), HttpStatus.NOT_FOUND); }
+        if(!listingEntityToManaged.isPresent()){ throw new ResourceNotFoundException(MessageFormat.format(LISTING_IDENTIFIER_NOT_FOUND_MESSAGE, listingId), HttpStatus.NOT_FOUND); }
 
         /* Check if the state is not the same */
-        if(manageListing.get().getState().equals(state)){throw new RequestStateException(MessageFormat.format(LISTING_STATE_MANAGEMENT_MESSAGE, manageListing.get().getId()), HttpStatus.BAD_REQUEST);}
+        if(listingEntityToManaged.get().getState().equals(manageListing.getState())){throw new RequestStateException(MessageFormat.format(LISTING_STATE_MANAGEMENT_MESSAGE, listingEntityToManaged.get().getId()), HttpStatus.BAD_REQUEST);}
 
         /* Getting listings by dealerId */
-        List<ListingEntity> listingEntities = listingRepository.findAllByDealer_id(manageListing.get().getDealer_id());
+        List<ListingEntity> listingEntities = listingRepository.findAllByDealer_id(listingEntityToManaged.get().getDealer_id());
 
         /* fFnd the listings whose state is published */
         listingEntities = listingEntities.stream().filter(listingEntity -> listingEntity.getState().equals(State.published)).collect(Collectors.toList());
+
+        listingEntities.stream().sorted(Comparator.comparing(ListingEntity::getPublishedAt).reversed());
 
         /* Getting maximum listing count */
         int numberOfPublished = listingEntities.size();
 
         /* Check if the maximum is not reached */
-        if( numberOfPublished >= manageListing.get().getDealer().getLimitOfPublishedListings()){
-            log.trace(MessageFormat.format(LISTING_PUBLISHED_REACHED_MESSAGE, numberOfPublished));
-            throw new MaximumListingCountReachedException(MessageFormat.format(LISTING_PUBLISHED_REACHED_MESSAGE, numberOfPublished), HttpStatus.UNAUTHORIZED);
+        if( numberOfPublished >= listingEntityToManaged.get().getDealer().getLimitOfPublishedListings()){
+            if(manageListing.isShowException()){
+                log.trace(MessageFormat.format(LISTING_PUBLISHED_REACHED_MESSAGE, numberOfPublished));
+                throw new MaximumListingCountReachedException(MessageFormat.format(LISTING_PUBLISHED_REACHED_MESSAGE, numberOfPublished), HttpStatus.UNAUTHORIZED);
+            }
+            /* Get the oldest listing and unpublished the listing */
+            ListingEntity oldestListingUnPublished = changeState(listingEntities.get(0), State.draft);
+
+            log.info("UnPublishedOldestListing end ok - id: {}", oldestListingUnPublished.getId());
+            log.trace("UnPublishedOldestListing end ok - listing: {}", oldestListingUnPublished);
+
+            /* Published the listing */
+            return  publishedListing(listingEntityToManaged.get(), manageListing.getState());
         }
 
+        return publishedListing(listingEntityToManaged.get(), manageListing.getState());
+    }
+
+    private ListingEntity changeState(ListingEntity listingToBeUpdated, State state){
         /* Changing state */
-        manageListing.get().setState(state);
+        listingToBeUpdated.setState(state);
+        return listingRepository.save(listingToBeUpdated);
+    }
 
-        /* Saving entity */
-        ListingEntity listingUpdated = listingRepository.save(manageListing.get());
+    private ListingPojo publishedListing(ListingEntity listingToBeUpdated, State state){
 
-        log.info("managing listing end ok - id: {}", listingId);
-        log.trace("managing end ok - listing: {}", listingUpdated);
+        listingToBeUpdated.setPublishedAt(LocalDateTime.now());
+        ListingEntity listingPublished = changeState(listingToBeUpdated, state);
 
-        return listingMapper.asListing(listingUpdated);
+        log.info("Published the listing end ok - id: {}", listingPublished.getId());
+        log.trace("Published the listing end ok - listing: {}", listingPublished);
+        log.trace("Published the listing end ok - getPublishedAt: {}", listingPublished.getPublishedAt());
+        return listingMapper.asListing(listingPublished);
     }
 }

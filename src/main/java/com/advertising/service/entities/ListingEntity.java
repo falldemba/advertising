@@ -44,6 +44,10 @@ public class ListingEntity {
     @Column(name = "state", nullable = false)
     State state;
 
+
+    @Column(name = "publishedAt", nullable = true)
+    LocalDateTime publishedAt;
+
     @CreatedDate
     @Column(name = "createdAt", insertable = true, updatable = false)
     LocalDateTime createdAt;

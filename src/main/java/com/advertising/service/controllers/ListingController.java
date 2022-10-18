@@ -1,6 +1,7 @@
 package com.advertising.service.controllers;
 
 import com.advertising.service.models.Listing;
+import com.advertising.service.models.ManageListing;
 import com.advertising.service.models.POJO.ListingPojo;
 import com.advertising.service.models.State;
 import com.advertising.service.services.ListingService;
@@ -116,7 +117,7 @@ public class ListingController {
     @PutMapping("/manage/{listingId}")
     @ResponseStatus(HttpStatus.OK)
     public ListingPojo manageListing(@Parameter(description = "the listing identifier to be managed", required = true) @PathVariable("listingId") int listingId,
-                               @Valid @Parameter(description = "the state body to be managed", required = true) @RequestBody State state){
-        return listingService.manageListing(listingId, state);
+                               @Valid @Parameter(description = "the managingListing object body to be managed", required = true) @RequestBody ManageListing manageListing){
+        return listingService.manageListing(listingId, manageListing);
     }
 }

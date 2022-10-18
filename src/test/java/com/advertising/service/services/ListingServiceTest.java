@@ -2,10 +2,12 @@ package com.advertising.service.services;
 
 import com.advertising.service.ServiceTest;
 import com.advertising.service.builders.ListingDataBuilder;
+import com.advertising.service.builders.ManageListingDataBuilder;
 import com.advertising.service.exceptions.MaximumListingCountReachedException;
 import com.advertising.service.exceptions.RequestStateException;
 import com.advertising.service.exceptions.ResourceNotFoundException;
 import com.advertising.service.models.Listing;
+import com.advertising.service.models.ManageListing;
 import com.advertising.service.models.POJO.ListingPojo;
 import com.advertising.service.models.State;
 import com.advertising.service.repositories.ListingRepository;
@@ -69,7 +71,7 @@ public class ListingServiceTest extends ServiceTest {
     void shouldDeleteListing(){
 
         // Given
-        int listingId = 7;
+        int listingId = 8;
 
         // When
         listingService.deleteListing(listingId);
@@ -92,33 +94,47 @@ public class ListingServiceTest extends ServiceTest {
     void shouldThrowMaximumListingCountReachedException(){
 
         // Given
-        int listingId = 6;
-        State state = State.published;
+        int listingId = 7;
+        ManageListing manageListing = ManageListingDataBuilder.getBuilder().state(State.published).build();
 
         // Then
-        assertThrows(MaximumListingCountReachedException.class, () -> listingService.manageListing(listingId, state));
+        assertThrows(MaximumListingCountReachedException.class, () -> listingService.manageListing(listingId, manageListing));
+    }
+
+    @Test
+    void shouldUnpublishedOldestListingAndPublishNewListingWhenCountReached(){
+        // Given
+        int listingId = 6;
+        ManageListing manageListing = ManageListingDataBuilder.getBuilder().showException(false).state(State.published).build();
+        // When
+        ListingPojo listingManaged = listingService.manageListing(listingId, manageListing);
+
+        // Then
+        assertEquals(listingId, listingManaged.getId());
+        assertEquals(manageListing.getState(), listingManaged.getState());
     }
 
     @Test
     void shouldThrowRequestStateException(){
 
         // Given
-        int listingId = 6;
-        State state = State.draft;
+        int listingId = 3;
+        ManageListing manageListing = ManageListingDataBuilder.getBuilder().state(State.published).build();
 
         // Then
-        assertThrows(RequestStateException.class, () -> listingService.manageListing(listingId, state));
+        assertThrows(RequestStateException.class, () -> listingService.manageListing(listingId, manageListing));
     }
 
     @Test
     void shouldManageListingOK(){
 
         // Given
-        int listingId = 5;
+        int listingId = 9;
         State state = State.published;
+        ManageListing manageListing = ManageListingDataBuilder.getBuilder().state(state).build();
 
         // When
-        ListingPojo listingManaged = listingService.manageListing(listingId, state);
+        ListingPojo listingManaged = listingService.manageListing(listingId, manageListing);
 
         // Then
         assertEquals(listingId, listingManaged.getId());
@@ -132,7 +148,7 @@ public class ListingServiceTest extends ServiceTest {
         Page<ListingPojo> listings = listingService.readAllByFilters(null, null, null, null, null, PageRequest.of(0, Integer.MAX_VALUE));
 
         // Then
-        assertEquals(6, listings.getTotalElements());
+        assertEquals(8, listings.getTotalElements());
     }
 
 }
