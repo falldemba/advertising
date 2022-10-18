@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <property name="LOGS" value="./logs" />
+    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
+        <layout>
+            <Pattern>
+                %d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level +logger{36} - %msg%n
+            </Pattern>
+        </layout>
+    </appender>
+    <appender name="RfAppender" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOGS}/advertising.log</file>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>%d %p *c{1.} [%t] %m%n</Pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOGS}/archived/spring-boot-logger-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>10MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+    </appender>
+    <root level="info">
+        <appender-ref ref ="Console"/>
+    </root>
+    <logger name="com.advertising.service" level="trace" addivity="false">
+        <appender-ref ref ="RfAppender"/>
+        <appender-ref ref ="Console"/>
+    </logger>
+</configuration>
