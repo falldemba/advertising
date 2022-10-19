@@ -18,7 +18,8 @@ mvn spring-boot:run
 ```
 
 ## Database Schema 
-![advertising-schema-database](https://user-images.githubusercontent.com/11476407/196562710-a7d4b4b2-885b-4fca-bbb7-694b1b6df359.png)
+<img width="263" alt="advertising-schema-database" src="https://user-images.githubusercontent.com/11476407/196592098-f65fdf36-9825-4a1d-89b3-e8d5662a038e.png">
+
 
 ## Copyright
 
